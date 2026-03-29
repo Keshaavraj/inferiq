@@ -158,6 +158,114 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Mini Wizard — TOP (moved here) ── */}
+      <section style={{ padding: "60px 0", borderTop: "1px solid var(--border)", background: "var(--bg-secondary)" }}>
+        <div className="container">
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <p className="section-title">What should you deploy?</p>
+            <p className="section-sub">Enter your hardware constraints — get an instant data-driven recommendation.</p>
+          </div>
+
+          <div className="card" style={{ maxWidth: 760, margin: "0 auto", borderColor: "var(--border-bright)" }}>
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 20 }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>VRAM Available</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {VRAM_PRESETS.map((v) => (
+                    <button key={v} onClick={() => setWizardVram(v)} style={{
+                      padding: "6px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600,
+                      cursor: "pointer", border: "1px solid",
+                      borderColor: wizardVram === v ? "var(--accent)" : "var(--border)",
+                      background: wizardVram === v ? "var(--accent-dim)" : "var(--bg-card)",
+                      color: wizardVram === v ? "var(--accent)" : "var(--text-secondary)",
+                    }}>{v} GB</button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Min Quality</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[80, 90, 95].map((q) => (
+                    <button key={q} onClick={() => setWizardQuality(q)} style={{
+                      padding: "6px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600,
+                      cursor: "pointer", border: "1px solid",
+                      borderColor: wizardQuality === q ? QUALITY_COLOR(q) : "var(--border)",
+                      background: wizardQuality === q ? `${QUALITY_COLOR(q)}18` : "var(--bg-card)",
+                      color: wizardQuality === q ? QUALITY_COLOR(q) : "var(--text-secondary)",
+                    }}>{q}%</button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Task</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {["qa", "code", "summarization"].map((t) => (
+                    <button key={t} onClick={() => setWizardTask(t)} style={{
+                      padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                      cursor: "pointer", border: "1px solid",
+                      borderColor: wizardTask === t ? "var(--purple)" : "var(--border)",
+                      background: wizardTask === t ? "rgba(167,139,250,0.12)" : "var(--bg-card)",
+                      color: wizardTask === t ? "var(--purple)" : "var(--text-secondary)",
+                    }}>{t === "qa" ? "Q&A" : t.charAt(0).toUpperCase() + t.slice(1)}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <button className="btn btn-primary" onClick={handleWizard} disabled={wizardLoading}
+              style={{ width: "100%", justifyContent: "center", padding: "13px" }}>
+              {wizardLoading
+                ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Finding best match…</>
+                : "Get My Recommendation"}
+            </button>
+
+            {wizardRan && wizardResult && (
+              <div style={{ marginTop: 20 }}>
+                {!wizardResult.recommendation ? (
+                  <div style={{ padding: 16, background: "rgba(251,191,36,0.06)", border: "1px solid var(--yellow)", borderRadius: 8, fontSize: 13, color: "var(--yellow)" }}>
+                    {wizardResult.message}
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: "20px", background: "var(--accent-dim)",
+                    border: "1px solid var(--accent)", borderRadius: 10,
+                    display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16,
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Recommended</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: "-0.5px" }}>{wizardResult.recommendation.model_name}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: "var(--purple)", marginTop: 2 }}>{wizardResult.recommendation.quant_level}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                      {[
+                        { label: "Quality", value: `${wizardResult.recommendation.quality_retention_pct}%`, color: QUALITY_COLOR(wizardResult.recommendation.quality_retention_pct) },
+                        { label: "VRAM",    value: `${(wizardResult.recommendation.vram_mb / 1024).toFixed(1)} GB`, color: "var(--accent)" },
+                        { label: "Tok/s",   value: wizardResult.recommendation.tokens_per_sec, color: "var(--text-secondary)" },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} style={{ textAlign: "center" }}>
+                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 800, color }}>{value}</div>
+                          <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 2 }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <button className="btn btn-primary" onClick={() => navigate("/dashboard")} style={{ fontSize: 13 }}>
+                        See full benchmarks →
+                      </button>
+                      <button className="btn btn-outline" onClick={() => navigate("/dashboard")} style={{ fontSize: 12 }}>
+                        Try live demo
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ── Problem ── */}
       <section className="problem-section">
         <div className="container problem-quote">
@@ -254,118 +362,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Mini Wizard ── */}
-      <section className="preview-section" style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="container">
-          <p className="section-title">Try it now — what should you deploy?</p>
-          <p className="section-sub">Enter your hardware constraints and get a recommendation instantly.</p>
-
-          <div className="card" style={{ maxWidth: 720, margin: "0 auto" }}>
-            {/* Controls row */}
-            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 20 }}>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>VRAM Available</div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {VRAM_PRESETS.map((v) => (
-                    <button key={v} onClick={() => setWizardVram(v)} style={{
-                      padding: "6px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600,
-                      cursor: "pointer", border: "1px solid",
-                      borderColor: wizardVram === v ? "var(--accent)" : "var(--border)",
-                      background: wizardVram === v ? "var(--accent-dim)" : "var(--bg-secondary)",
-                      color: wizardVram === v ? "var(--accent)" : "var(--text-secondary)",
-                    }}>
-                      {v} GB
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Min Quality</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[80, 90, 95].map((q) => (
-                    <button key={q} onClick={() => setWizardQuality(q)} style={{
-                      padding: "6px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600,
-                      cursor: "pointer", border: "1px solid",
-                      borderColor: wizardQuality === q ? QUALITY_COLOR(q) : "var(--border)",
-                      background: wizardQuality === q ? `${QUALITY_COLOR(q)}18` : "var(--bg-secondary)",
-                      color: wizardQuality === q ? QUALITY_COLOR(q) : "var(--text-secondary)",
-                    }}>
-                      {q}%
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ flex: 1, minWidth: 150 }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Task</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {["qa", "code", "summarization"].map((t) => (
-                    <button key={t} onClick={() => setWizardTask(t)} style={{
-                      padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                      cursor: "pointer", border: "1px solid",
-                      borderColor: wizardTask === t ? "var(--purple)" : "var(--border)",
-                      background: wizardTask === t ? "rgba(167,139,250,0.12)" : "var(--bg-secondary)",
-                      color: wizardTask === t ? "var(--purple)" : "var(--text-secondary)",
-                    }}>
-                      {t === "qa" ? "Q&A" : t.charAt(0).toUpperCase() + t.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <button className="btn btn-primary" onClick={handleWizard} disabled={wizardLoading}
-              style={{ width: "100%", justifyContent: "center", padding: "12px" }}>
-              {wizardLoading
-                ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Finding best match…</>
-                : "Get My Recommendation"}
-            </button>
-
-            {/* Result */}
-            {wizardRan && wizardResult && (
-              <div style={{ marginTop: 20 }}>
-                {!wizardResult.recommendation ? (
-                  <div style={{ padding: 16, background: "rgba(251,191,36,0.06)", border: "1px solid var(--yellow)", borderRadius: 8, fontSize: 13, color: "var(--yellow)" }}>
-                    {wizardResult.message}
-                  </div>
-                ) : (
-                  <div style={{
-                    padding: "20px", background: "var(--accent-dim)",
-                    border: "1px solid var(--accent)", borderRadius: 10,
-                    display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16,
-                  }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Recommended</div>
-                      <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.5px" }}>
-                        {wizardResult.recommendation.model_name}
-                      </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: "var(--purple)", marginTop: 2 }}>
-                        {wizardResult.recommendation.quant_level}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                      {[
-                        { label: "Quality", value: `${wizardResult.recommendation.quality_retention_pct}%`, color: QUALITY_COLOR(wizardResult.recommendation.quality_retention_pct) },
-                        { label: "VRAM", value: `${(wizardResult.recommendation.vram_mb / 1024).toFixed(1)} GB`, color: "var(--accent)" },
-                        { label: "Tok/s", value: wizardResult.recommendation.tokens_per_sec, color: "var(--text-secondary)" },
-                      ].map(({ label, value, color }) => (
-                        <div key={label} style={{ textAlign: "center" }}>
-                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 20, fontWeight: 800, color }}>{value}</div>
-                          <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 2 }}>{label}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <button className="btn btn-outline" onClick={() => navigate("/dashboard#demo")} style={{ fontSize: 12 }}>
-                      See live demo →
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* ── How it works ── */}
       <section className="how-section" id="how">
