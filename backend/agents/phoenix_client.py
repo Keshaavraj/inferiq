@@ -30,27 +30,23 @@ def setup_phoenix():
     port = int(os.getenv("PHOENIX_PORT", "6006"))
 
     try:
-        import phoenix as px
         from phoenix.otel import register
         from openinference.instrumentation.groq import GroqInstrumentor
 
-        # Connect to existing Phoenix instance (Railway) or launch locally
         phoenix_endpoint = os.getenv("PHOENIX_COLLECTOR_ENDPOINT")
 
         if phoenix_endpoint:
-            # Production: Phoenix running as separate Railway service
             tracer_provider = register(
                 project_name="inferiq",
                 endpoint=phoenix_endpoint,
             )
         else:
-            # Development: launch Phoenix in-process
+            # Launch in-process (dev / Railway single-service)
+            import phoenix as px
             _phoenix_session = px.launch_app(host=host, port=port)
             tracer_provider = register(project_name="inferiq")
 
         _tracer_provider = tracer_provider
-
-        # Auto-instrument all Groq SDK calls
         GroqInstrumentor().instrument(tracer_provider=tracer_provider)
 
         print(f"Phoenix initialized — project: inferiq")
