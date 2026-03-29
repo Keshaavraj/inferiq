@@ -24,9 +24,33 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await auto_seed()
     setup_phoenix()
     yield
     flush()  # flush Langfuse events on shutdown
+
+
+async def auto_seed():
+    """Seed DB on startup if empty — runs automatically every deploy."""
+    import json
+    from pathlib import Path
+    from storage.database import get_all_results, insert_result
+
+    existing = await get_all_results()
+    if existing:
+        return  # already seeded
+
+    seed_file = Path(__file__).parent.parent / "benchmarks" / "seed_results.json"
+    if not seed_file.exists():
+        return
+
+    with open(seed_file) as f:
+        data = json.load(f)
+
+    for result in data["results"]:
+        await insert_result(result)
+
+    print(f"Auto-seeded {len(data['results'])} benchmark results.")
 
 
 app = FastAPI(
@@ -58,6 +82,33 @@ async def health():
         "environment": os.getenv("ENVIRONMENT", "development"),
         "phoenix_url": get_phoenix_url(),
     }
+
+
+# ── Seed endpoint (one-time use) ──────────────────────────────────────────────
+
+@app.post("/api/seed")
+async def seed_db(secret: str = Query(...)):
+    """Load seed benchmark data into SQLite. Protected by secret key."""
+    if secret != os.getenv("SEED_SECRET", "inferiq-seed-2026"):
+        raise HTTPException(status_code=403, detail="Invalid secret.")
+
+    import json
+    from pathlib import Path
+    from storage.database import insert_result
+
+    seed_file = Path(__file__).parent.parent / "benchmarks" / "seed_results.json"
+    if not seed_file.exists():
+        raise HTTPException(status_code=404, detail="Seed file not found.")
+
+    with open(seed_file) as f:
+        data = json.load(f)
+
+    count = 0
+    for result in data["results"]:
+        await insert_result(result)
+        count += 1
+
+    return {"seeded": count, "message": f"Successfully loaded {count} benchmark results."}
 
 
 # ── Benchmark Results ──────────────────────────────────────────────────────────
