@@ -57,6 +57,7 @@ export default function LandingPage() {
   // Live leaderboard
   const [liveResults, setLiveResults] = useState([]);
   const [resultsLoading, setResultsLoading] = useState(true);
+  const [showAllRows, setShowAllRows] = useState(false);
 
   // Mini wizard
   const [wizardVram, setWizardVram] = useState(4);
@@ -87,6 +88,8 @@ export default function LandingPage() {
       .catch(() => setWizardLoading(false));
   }
 
+  const tableRows = showAllRows ? liveResults : liveResults.slice(0, 4);
+
   return (
     <div>
       {/* ── Nav ── */}
@@ -109,152 +112,120 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ── Hero ── */}
-      <section className="hero">
-        <div className="hero-bg" />
-        <div style={{ position: "relative", zIndex: 1, width: "100%" }}>
-          <div className="hero-eyebrow">
-            Evidence over advice — real numbers on real hardware
-          </div>
+      {/* ── Above-fold: compact hero + two-column action zone ── */}
+      <section className="above-fold">
+        <div className="above-fold-bg" />
 
-          <h1 className="hero-title">
-            Which LLM quantization<br />
-            should you <span className="highlight">actually deploy?</span>
+        {/* Compact headline */}
+        <div className="above-fold-headline">
+          <div className="hero-eyebrow">Evidence over advice — real numbers on real hardware</div>
+          <h1 className="hero-title-compact">
+            Which LLM quantization should you{" "}
+            <span className="highlight">actually deploy?</span>
           </h1>
-
-          <p className="hero-subtitle">
-            InferIQ benchmarks GGUF, AWQ, bitsandbytes INT4/INT8 and fp16 across
-            Llama and Mistral models — measuring TTFT, throughput, VRAM footprint,
-            and quality retention on edge hardware. So you can decide with data.
+          <p className="hero-subtitle-compact">
+            Real benchmarks across GGUF, AWQ &amp; bitsandbytes on edge hardware.
+            Pick the right tradeoff for your VRAM and task.
           </p>
-
-          <div className="hero-actions">
-            <button className="btn btn-primary" onClick={() => navigate("/dashboard")}>
-              Explore Benchmarks
-            </button>
-            <button className="btn btn-outline" onClick={() => navigate("/dashboard#demo")}>
-              Try Live Demo
-            </button>
-          </div>
-
-          <div className="hero-stats container">
-            <div className="hero-stat">
-              <span className="hero-stat-value">3</span>
-              <div className="hero-stat-label">Models Tested</div>
-            </div>
-            <div className="hero-stat">
-              <span className="hero-stat-value">8</span>
-              <div className="hero-stat-label">Quant Formats</div>
-            </div>
-            <div className="hero-stat">
-              <span className="hero-stat-value">26</span>
-              <div className="hero-stat-label">Benchmark Runs</div>
-            </div>
-            <div className="hero-stat">
-              <span className="hero-stat-value">4 GB</span>
-              <div className="hero-stat-label">Max VRAM Used</div>
-            </div>
-          </div>
         </div>
-      </section>
 
-      {/* ── Mini Wizard — TOP (moved here) ── */}
-      <section style={{ padding: "60px 0", borderTop: "1px solid var(--border)", background: "var(--bg-secondary)" }}>
-        <div className="container">
-          <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <p className="section-title">What should you deploy?</p>
-            <p className="section-sub">Enter your hardware constraints — get an instant data-driven recommendation.</p>
-          </div>
+        {/* Two-column action zone */}
+        <div className="above-fold-grid container">
 
-          <div className="card" style={{ maxWidth: 760, margin: "0 auto", borderColor: "var(--border-bright)" }}>
-            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 20 }}>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>VRAM Available</div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {VRAM_PRESETS.map((v) => (
-                    <button key={v} onClick={() => setWizardVram(v)} style={{
-                      padding: "6px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600,
-                      cursor: "pointer", border: "1px solid",
-                      borderColor: wizardVram === v ? "var(--accent)" : "var(--border)",
-                      background: wizardVram === v ? "var(--accent-dim)" : "var(--bg-card)",
-                      color: wizardVram === v ? "var(--accent)" : "var(--text-secondary)",
-                    }}>{v} GB</button>
-                  ))}
-                </div>
+          {/* LEFT: Hardware Wizard */}
+          <div className="card above-fold-card" style={{ borderColor: "var(--border-bright)" }}>
+            <div className="above-fold-card-header">
+              <span style={{ color: "var(--accent)", fontWeight: 700, fontSize: 14 }}>Hardware Wizard</span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>What should you deploy?</span>
+            </div>
+
+            <div className="wizard-row">
+              <div className="wizard-label">VRAM</div>
+              <div className="wizard-options">
+                {VRAM_PRESETS.map((v) => (
+                  <button key={v} onClick={() => setWizardVram(v)} className={`wizard-btn ${wizardVram === v ? "wizard-btn-active-blue" : ""}`}>
+                    {v} GB
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Min Quality</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[80, 90, 95].map((q) => (
-                    <button key={q} onClick={() => setWizardQuality(q)} style={{
-                      padding: "6px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600,
-                      cursor: "pointer", border: "1px solid",
+            <div className="wizard-row">
+              <div className="wizard-label">Min Quality</div>
+              <div className="wizard-options">
+                {[80, 90, 95].map((q) => (
+                  <button key={q} onClick={() => setWizardQuality(q)}
+                    className="wizard-btn"
+                    style={{
                       borderColor: wizardQuality === q ? QUALITY_COLOR(q) : "var(--border)",
                       background: wizardQuality === q ? `${QUALITY_COLOR(q)}18` : "var(--bg-card)",
                       color: wizardQuality === q ? QUALITY_COLOR(q) : "var(--text-secondary)",
-                    }}>{q}%</button>
-                  ))}
-                </div>
+                    }}>
+                    {q}%
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div style={{ flex: 1, minWidth: 150 }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Task</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {["qa", "code", "summarization"].map((t) => (
-                    <button key={t} onClick={() => setWizardTask(t)} style={{
-                      padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                      cursor: "pointer", border: "1px solid",
+            <div className="wizard-row">
+              <div className="wizard-label">Task</div>
+              <div className="wizard-options">
+                {["qa", "code", "summarization"].map((t) => (
+                  <button key={t} onClick={() => setWizardTask(t)}
+                    className="wizard-btn"
+                    style={{
                       borderColor: wizardTask === t ? "var(--purple)" : "var(--border)",
                       background: wizardTask === t ? "rgba(167,139,250,0.12)" : "var(--bg-card)",
                       color: wizardTask === t ? "var(--purple)" : "var(--text-secondary)",
-                    }}>{t === "qa" ? "Q&A" : t.charAt(0).toUpperCase() + t.slice(1)}</button>
-                  ))}
-                </div>
+                    }}>
+                    {t === "qa" ? "Q&A" : t === "code" ? "Code" : "Summarize"}
+                  </button>
+                ))}
               </div>
             </div>
 
             <button className="btn btn-primary" onClick={handleWizard} disabled={wizardLoading}
-              style={{ width: "100%", justifyContent: "center", padding: "13px" }}>
+              style={{ width: "100%", justifyContent: "center", padding: "11px", marginTop: 4 }}>
               {wizardLoading
-                ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Finding best match…</>
-                : "Get My Recommendation"}
+                ? <><span className="spinner" style={{ width: 13, height: 13 }} /> Finding best match…</>
+                : "Get My Recommendation →"}
             </button>
 
             {wizardRan && wizardResult && (
-              <div style={{ marginTop: 20 }}>
+              <div style={{ marginTop: 14 }}>
                 {!wizardResult.recommendation ? (
-                  <div style={{ padding: 16, background: "rgba(251,191,36,0.06)", border: "1px solid var(--yellow)", borderRadius: 8, fontSize: 13, color: "var(--yellow)" }}>
+                  <div style={{ padding: "12px 14px", background: "rgba(251,191,36,0.06)", border: "1px solid var(--yellow)", borderRadius: 8, fontSize: 12, color: "var(--yellow)" }}>
                     {wizardResult.message}
                   </div>
                 ) : (
                   <div style={{
-                    padding: "20px", background: "var(--accent-dim)",
+                    padding: "16px", background: "var(--accent-dim)",
                     border: "1px solid var(--accent)", borderRadius: 10,
-                    display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16,
                   }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Recommended</div>
-                      <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: "-0.5px" }}>{wizardResult.recommendation.model_name}</div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: "var(--purple)", marginTop: 2 }}>{wizardResult.recommendation.quant_level}</div>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }}>Recommended</div>
+                        <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: "-0.5px" }}>{wizardResult.recommendation.model_name}</div>
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--purple)", marginTop: 2 }}>{wizardResult.recommendation.quant_level}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 16 }}>
+                        {[
+                          { label: "Quality", value: `${wizardResult.recommendation.quality_retention_pct}%`, color: QUALITY_COLOR(wizardResult.recommendation.quality_retention_pct) },
+                          { label: "VRAM",    value: `${(wizardResult.recommendation.vram_mb / 1024).toFixed(1)} GB`, color: "var(--accent)" },
+                          { label: "Tok/s",   value: wizardResult.recommendation.tokens_per_sec, color: "var(--text-secondary)" },
+                        ].map(({ label, value, color }) => (
+                          <div key={label} style={{ textAlign: "center" }}>
+                            <div style={{ fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 800, color }}>{value}</div>
+                            <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>{label}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                      {[
-                        { label: "Quality", value: `${wizardResult.recommendation.quality_retention_pct}%`, color: QUALITY_COLOR(wizardResult.recommendation.quality_retention_pct) },
-                        { label: "VRAM",    value: `${(wizardResult.recommendation.vram_mb / 1024).toFixed(1)} GB`, color: "var(--accent)" },
-                        { label: "Tok/s",   value: wizardResult.recommendation.tokens_per_sec, color: "var(--text-secondary)" },
-                      ].map(({ label, value, color }) => (
-                        <div key={label} style={{ textAlign: "center" }}>
-                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 800, color }}>{value}</div>
-                          <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 2 }}>{label}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <button className="btn btn-primary" onClick={() => navigate("/dashboard")} style={{ fontSize: 13 }}>
-                        See full benchmarks →
+                    <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                      <button className="btn btn-primary" onClick={() => navigate("/dashboard")} style={{ fontSize: 12, padding: "8px 14px", flex: 1, justifyContent: "center" }}>
+                        Full benchmarks →
                       </button>
-                      <button className="btn btn-outline" onClick={() => navigate("/dashboard")} style={{ fontSize: 12 }}>
+                      <button className="btn btn-outline" onClick={() => navigate("/dashboard")} style={{ fontSize: 12, padding: "8px 14px", flex: 1, justifyContent: "center" }}>
                         Try live demo
                       </button>
                     </div>
@@ -263,6 +234,102 @@ export default function LandingPage() {
               </div>
             )}
           </div>
+
+          {/* RIGHT: Mini benchmark table */}
+          <div className="card above-fold-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="above-fold-card-header" style={{ padding: "14px 16px", borderBottom: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 14 }}>Live Benchmark Results</span>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                {resultsLoading ? "loading…" : "live · sorted by quality"}
+              </span>
+            </div>
+
+            {resultsLoading ? (
+              <div style={{ padding: "40px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, color: "var(--text-muted)", fontSize: 13 }}>
+                <div className="spinner" /> Fetching live data…
+              </div>
+            ) : (
+              <>
+                <table className="mini-table">
+                  <thead>
+                    <tr>
+                      <th>Model</th>
+                      <th>Quant</th>
+                      <th>VRAM</th>
+                      <th>Quality</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableRows.map((r, i) => {
+                      const qPct = r.quality_retention_pct;
+                      const color = QUALITY_COLOR(qPct);
+                      return (
+                        <tr key={i}>
+                          <td className="mini-model">{r.model_name}</td>
+                          <td style={{ color: "var(--purple)", fontFamily: "var(--font-mono)", fontSize: 12 }}>{r.quant_level}</td>
+                          <td style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-secondary)" }}>{(r.vram_mb / 1024).toFixed(1)} GB</td>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <div style={{ width: 40, height: 5, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
+                                <div style={{ width: `${qPct}%`, height: "100%", background: color, borderRadius: 3 }} />
+                              </div>
+                              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color, minWidth: 40 }}>{qPct.toFixed(1)}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                <div style={{ display: "flex", gap: 0, borderTop: "1px solid var(--border)" }}>
+                  {liveResults.length > 4 && (
+                    <button
+                      onClick={() => setShowAllRows(!showAllRows)}
+                      style={{
+                        flex: 1, padding: "10px", fontSize: 12, fontWeight: 600,
+                        background: "transparent", border: "none", borderRight: "1px solid var(--border)",
+                        color: "var(--text-muted)", cursor: "pointer",
+                      }}
+                      onMouseOver={e => e.currentTarget.style.color = "var(--accent)"}
+                      onMouseOut={e => e.currentTarget.style.color = "var(--text-muted)"}
+                    >
+                      {showAllRows ? "Show less ↑" : `+${liveResults.length - 4} more rows ↓`}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate("/dashboard")}
+                    style={{
+                      flex: 2, padding: "10px", fontSize: 12, fontWeight: 600,
+                      background: "transparent", border: "none",
+                      color: "var(--accent)", cursor: "pointer",
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = "var(--accent-dim)"}
+                    onMouseOut={e => e.currentTarget.style.background = "transparent"}
+                  >
+                    View all 26 results + charts →
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+        </div>
+
+        {/* Stats strip */}
+        <div className="stats-strip container">
+          {[
+            { value: "3", label: "Models Tested" },
+            { value: "8", label: "Quant Formats" },
+            { value: "26", label: "Benchmark Runs" },
+            { value: "4 GB", label: "Max VRAM Used" },
+            { value: "15", label: "Task Prompts" },
+          ].map(({ value, label }) => (
+            <div key={label} className="stats-strip-item">
+              <span className="stats-strip-value">{value}</span>
+              <span className="stats-strip-label">{label}</span>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -297,71 +364,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* ── Live Leaderboard Preview ── */}
-      <section className="preview-section">
-        <div className="container">
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
-            <p className="section-title" style={{ marginBottom: 0 }}>Live benchmark results</p>
-            <span style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-              {resultsLoading ? "fetching from API…" : `${liveResults.length} results · live data`}
-            </span>
-          </div>
-          <p className="section-sub">Quality retention % = model score ÷ fp16 baseline × 100. Sorted by quality.</p>
-
-          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-            {resultsLoading ? (
-              <div style={{ padding: "40px", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, color: "var(--text-muted)", fontSize: 13 }}>
-                <div className="spinner" /> Fetching live data from API…
-              </div>
-            ) : (
-              <table className="preview-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Model</th>
-                    <th>Quantization</th>
-                    <th>VRAM</th>
-                    <th>Tok/sec</th>
-                    <th>Task</th>
-                    <th>Quality Retention</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {liveResults.map((r, i) => {
-                    const qPct = r.quality_retention_pct;
-                    const color = QUALITY_COLOR(qPct);
-                    return (
-                      <tr key={i}>
-                        <td style={{ color: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}>{i + 1}</td>
-                        <td className="model-col">{r.model_name}</td>
-                        <td className="quant-col">{r.quant_level}</td>
-                        <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{(r.vram_mb / 1024).toFixed(1)} GB</td>
-                        <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{r.tokens_per_sec}</td>
-                        <td><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "var(--bg-secondary)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>{r.task_type}</span></td>
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ flex: 1, height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden", minWidth: 60 }}>
-                              <div style={{ width: `${qPct}%`, height: "100%", background: color, borderRadius: 3 }} />
-                            </div>
-                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color, minWidth: 42 }}>{qPct.toFixed(1)}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-          <div style={{ textAlign: "center", marginTop: 20 }}>
-            <button className="btn btn-outline" onClick={() => navigate("/dashboard")}>
-              View full benchmark matrix + charts
-            </button>
-          </div>
-        </div>
-      </section>
-
 
       {/* ── How it works ── */}
       <section className="how-section" id="how">
