@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "nixpacksConfigPath": "nixpacks.toml"
+    "nixpacksConfigPath": "backend/nixpacks.toml"
   },
   "deploy": {
     "startCommand": "uvicorn server:app --host 0.0.0.0 --port $PORT",
