@@ -40,8 +40,12 @@ async def auto_seed():
     if existing:
         return  # already seeded
 
-    seed_file = Path(__file__).parent.parent / "benchmarks" / "seed_results.json"
+    # Try backend dir first (Railway), then repo root (local dev)
+    seed_file = Path(__file__).parent / "seed_results.json"
     if not seed_file.exists():
+        seed_file = Path(__file__).parent.parent / "benchmarks" / "seed_results.json"
+    if not seed_file.exists():
+        print("Seed file not found — skipping auto-seed.")
         return
 
     with open(seed_file) as f:
@@ -96,7 +100,9 @@ async def seed_db(secret: str = Query(...)):
     from pathlib import Path
     from storage.database import insert_result
 
-    seed_file = Path(__file__).parent.parent / "benchmarks" / "seed_results.json"
+    seed_file = Path(__file__).parent / "seed_results.json"
+    if not seed_file.exists():
+        seed_file = Path(__file__).parent.parent / "benchmarks" / "seed_results.json"
     if not seed_file.exists():
         raise HTTPException(status_code=404, detail="Seed file not found.")
 
