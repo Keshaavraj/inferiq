@@ -121,6 +121,7 @@ async def wizard(
 # ── Evals ─────────────────────────────────────────────────────────────────────
 
 class EvalRequest(BaseModel):
+    model_config = {"protected_namespaces": ()}
     prompt: str
     response_a: str
     response_b: str
@@ -157,16 +158,11 @@ async def demo_models():
 # ── Live Inference SSE ─────────────────────────────────────────────────────────
 
 class DemoRequest(BaseModel):
+    model_config = {"protected_namespaces": ()}
     prompt: str
     model_a: str = DEFAULT_PAIR[0]
     model_b: str = DEFAULT_PAIR[1]
     max_tokens: int = 300
-
-    model_config = {"json_schema_extra": {"example": {
-        "prompt": "Explain what quantization does to an LLM in 3 sentences.",
-        "model_a": "llama3.2-3b-q4",
-        "model_b": "llama3.1-8b-q4",
-    }}}
 
 
 @app.post("/api/demo")
