@@ -1,14 +1,7 @@
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { getResults, getWizardRecommendation } from "../utils/api";
 import "../styles/landing.css";
-
-const PREVIEW_DATA = [
-  { model: "Llama 3.2 3B", quant: "GGUF Q4_K_M", vram: "2.0 GB", tokSec: "56.4", quality: "94.3%", badge: "green", rec: "Recommended" },
-  { model: "Llama 3.2 3B", quant: "GGUF Q5_K_M", vram: "2.5 GB", tokSec: "47.6", quality: "96.8%", badge: "green", rec: "High Quality" },
-  { model: "Llama 3.2 3B", quant: "GGUF Q8_0",   vram: "3.3 GB", tokSec: "38.1", quality: "98.2%", badge: "green", rec: "Near Lossless" },
-  { model: "Mistral 7B",   quant: "GGUF Q4_K_M", vram: "3.9 GB", tokSec: "31.7", quality: "96.4%", badge: "green", rec: "Best 7B" },
-  { model: "Llama 3.2 3B", quant: "BNB INT4",    vram: "1.8 GB", tokSec: "43.9", quality: "92.6%", badge: "yellow", rec: "Budget" },
-  { model: "Llama 3.2 3B", quant: "GGUF Q3_K_M", vram: "1.6 GB", tokSec: "63.2", quality: "88.1%", badge: "red", rec: "Speed Only" },
-];
 
 const FEATURES = [
   {
@@ -50,8 +43,49 @@ const STACK = [
   "RTX 500 Ada 4GB", "Railway", "GitHub Pages",
 ];
 
+const QUALITY_COLOR = (pct) => {
+  if (pct >= 95) return "var(--green)";
+  if (pct >= 88) return "var(--yellow)";
+  return "var(--red)";
+};
+
+const VRAM_PRESETS = [2, 4, 6, 8, 16];
+
 export default function LandingPage() {
   const navigate = useNavigate();
+
+  // Live leaderboard
+  const [liveResults, setLiveResults] = useState([]);
+  const [resultsLoading, setResultsLoading] = useState(true);
+
+  // Mini wizard
+  const [wizardVram, setWizardVram] = useState(4);
+  const [wizardQuality, setWizardQuality] = useState(90);
+  const [wizardTask, setWizardTask] = useState("qa");
+  const [wizardResult, setWizardResult] = useState(null);
+  const [wizardLoading, setWizardLoading] = useState(false);
+  const [wizardRan, setWizardRan] = useState(false);
+
+  useEffect(() => {
+    getResults()
+      .then((r) => {
+        const sorted = [...r.data.results]
+          .filter((x) => x.quant_format !== "fp16")
+          .sort((a, b) => b.quality_retention_pct - a.quality_retention_pct)
+          .slice(0, 6);
+        setLiveResults(sorted);
+        setResultsLoading(false);
+      })
+      .catch(() => setResultsLoading(false));
+  }, []);
+
+  function handleWizard() {
+    setWizardLoading(true);
+    setWizardResult(null);
+    getWizardRecommendation(wizardVram, wizardQuality, wizardTask)
+      .then((r) => { setWizardResult(r.data); setWizardLoading(false); setWizardRan(true); })
+      .catch(() => setWizardLoading(false));
+  }
 
   return (
     <div>
@@ -156,45 +190,179 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Preview table ── */}
+      {/* ── Live Leaderboard Preview ── */}
       <section className="preview-section">
         <div className="container">
-          <p className="section-title">Sample results — Llama 3.2 3B on RTX 500 Ada (4 GB)</p>
-          <p className="section-sub">Quality retention % = model score ÷ fp16 baseline × 100</p>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
+            <p className="section-title" style={{ marginBottom: 0 }}>Live benchmark results</p>
+            <span style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+              {resultsLoading ? "fetching from API…" : `${liveResults.length} results · live data`}
+            </span>
+          </div>
+          <p className="section-sub">Quality retention % = model score ÷ fp16 baseline × 100. Sorted by quality.</p>
+
           <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-            <table className="preview-table">
-              <thead>
-                <tr>
-                  <th>Model</th>
-                  <th>Quantization</th>
-                  <th>VRAM</th>
-                  <th>Tok/sec</th>
-                  <th>Quality Retention</th>
-                  <th>Verdict</th>
-                </tr>
-              </thead>
-              <tbody>
-                {PREVIEW_DATA.map((r) => (
-                  <tr key={r.quant}>
-                    <td className="model-col">{r.model}</td>
-                    <td className="quant-col">{r.quant}</td>
-                    <td>{r.vram}</td>
-                    <td>{r.tokSec}</td>
-                    <td>
-                      <span className={`quality-${r.badge === "green" ? "high" : r.badge === "yellow" ? "medium" : "low"}`}>
-                        {r.quality}
-                      </span>
-                    </td>
-                    <td><span className={`badge badge-${r.badge}`}>{r.rec}</span></td>
+            {resultsLoading ? (
+              <div style={{ padding: "40px", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, color: "var(--text-muted)", fontSize: 13 }}>
+                <div className="spinner" /> Fetching live data from API…
+              </div>
+            ) : (
+              <table className="preview-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Model</th>
+                    <th>Quantization</th>
+                    <th>VRAM</th>
+                    <th>Tok/sec</th>
+                    <th>Task</th>
+                    <th>Quality Retention</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {liveResults.map((r, i) => {
+                    const qPct = r.quality_retention_pct;
+                    const color = QUALITY_COLOR(qPct);
+                    return (
+                      <tr key={i}>
+                        <td style={{ color: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}>{i + 1}</td>
+                        <td className="model-col">{r.model_name}</td>
+                        <td className="quant-col">{r.quant_level}</td>
+                        <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{(r.vram_mb / 1024).toFixed(1)} GB</td>
+                        <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{r.tokens_per_sec}</td>
+                        <td><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "var(--bg-secondary)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>{r.task_type}</span></td>
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ flex: 1, height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden", minWidth: 60 }}>
+                              <div style={{ width: `${qPct}%`, height: "100%", background: color, borderRadius: 3 }} />
+                            </div>
+                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color, minWidth: 42 }}>{qPct.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
           <div style={{ textAlign: "center", marginTop: 20 }}>
             <button className="btn btn-outline" onClick={() => navigate("/dashboard")}>
-              View full benchmark matrix
+              View full benchmark matrix + charts
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Mini Wizard ── */}
+      <section className="preview-section" style={{ borderTop: "1px solid var(--border)" }}>
+        <div className="container">
+          <p className="section-title">Try it now — what should you deploy?</p>
+          <p className="section-sub">Enter your hardware constraints and get a recommendation instantly.</p>
+
+          <div className="card" style={{ maxWidth: 720, margin: "0 auto" }}>
+            {/* Controls row */}
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 20 }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>VRAM Available</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {VRAM_PRESETS.map((v) => (
+                    <button key={v} onClick={() => setWizardVram(v)} style={{
+                      padding: "6px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600,
+                      cursor: "pointer", border: "1px solid",
+                      borderColor: wizardVram === v ? "var(--accent)" : "var(--border)",
+                      background: wizardVram === v ? "var(--accent-dim)" : "var(--bg-secondary)",
+                      color: wizardVram === v ? "var(--accent)" : "var(--text-secondary)",
+                    }}>
+                      {v} GB
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Min Quality</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[80, 90, 95].map((q) => (
+                    <button key={q} onClick={() => setWizardQuality(q)} style={{
+                      padding: "6px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600,
+                      cursor: "pointer", border: "1px solid",
+                      borderColor: wizardQuality === q ? QUALITY_COLOR(q) : "var(--border)",
+                      background: wizardQuality === q ? `${QUALITY_COLOR(q)}18` : "var(--bg-secondary)",
+                      color: wizardQuality === q ? QUALITY_COLOR(q) : "var(--text-secondary)",
+                    }}>
+                      {q}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Task</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {["qa", "code", "summarization"].map((t) => (
+                    <button key={t} onClick={() => setWizardTask(t)} style={{
+                      padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                      cursor: "pointer", border: "1px solid",
+                      borderColor: wizardTask === t ? "var(--purple)" : "var(--border)",
+                      background: wizardTask === t ? "rgba(167,139,250,0.12)" : "var(--bg-secondary)",
+                      color: wizardTask === t ? "var(--purple)" : "var(--text-secondary)",
+                    }}>
+                      {t === "qa" ? "Q&A" : t.charAt(0).toUpperCase() + t.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <button className="btn btn-primary" onClick={handleWizard} disabled={wizardLoading}
+              style={{ width: "100%", justifyContent: "center", padding: "12px" }}>
+              {wizardLoading
+                ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Finding best match…</>
+                : "Get My Recommendation"}
+            </button>
+
+            {/* Result */}
+            {wizardRan && wizardResult && (
+              <div style={{ marginTop: 20 }}>
+                {!wizardResult.recommendation ? (
+                  <div style={{ padding: 16, background: "rgba(251,191,36,0.06)", border: "1px solid var(--yellow)", borderRadius: 8, fontSize: 13, color: "var(--yellow)" }}>
+                    {wizardResult.message}
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: "20px", background: "var(--accent-dim)",
+                    border: "1px solid var(--accent)", borderRadius: 10,
+                    display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16,
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Recommended</div>
+                      <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.5px" }}>
+                        {wizardResult.recommendation.model_name}
+                      </div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: "var(--purple)", marginTop: 2 }}>
+                        {wizardResult.recommendation.quant_level}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                      {[
+                        { label: "Quality", value: `${wizardResult.recommendation.quality_retention_pct}%`, color: QUALITY_COLOR(wizardResult.recommendation.quality_retention_pct) },
+                        { label: "VRAM", value: `${(wizardResult.recommendation.vram_mb / 1024).toFixed(1)} GB`, color: "var(--accent)" },
+                        { label: "Tok/s", value: wizardResult.recommendation.tokens_per_sec, color: "var(--text-secondary)" },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} style={{ textAlign: "center" }}>
+                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 20, fontWeight: 800, color }}>{value}</div>
+                          <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 2 }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <button className="btn btn-outline" onClick={() => navigate("/dashboard#demo")} style={{ fontSize: 12 }}>
+                      See live demo →
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
